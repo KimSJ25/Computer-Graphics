@@ -3,13 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage import metrics
 
-# 1. 이미지 불러오기 
 img = cv2.imread('cat.jpg', cv2.IMREAD_GRAYSCALE)
 
 if img is None:
     print("이미지를 찾을 수 없습니다. 경로를 확인해주세요.")
 else:
-    # 2. 기법 적용
     # Global HE
     he_res = cv2.equalizeHist(img)
 
@@ -21,7 +19,6 @@ else:
     clahe_tool = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     clahe_res = clahe_tool.apply(img)
 
-    # 3. 데이터 정리
     methods = [
         ('Original', img),
         ('Global HE', he_res),
@@ -29,11 +26,9 @@ else:
         ('CLAHE', clahe_res)
     ]
 
-    # 4. 시각화 및 지표 출력
     plt.figure(figsize=(16, 20))
 
     for i, (name, processed) in enumerate(methods):
-        # 지표 계산 (원본과 비교)
         if name != 'Original':
             mse = metrics.mean_squared_error(img, processed)
             psnr = metrics.peak_signal_noise_ratio(img, processed)
