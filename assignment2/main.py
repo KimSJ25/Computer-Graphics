@@ -1,59 +1,61 @@
 import cv2
-import numpy as np
 import matplotlib.pyplot as plt
 
+img1 = cv2.imread('original.png')
+img2 = cv2.imread('add.png')
+img3 = cv2.imread('sub.png')
+img4 = cv2.imread('mul.png')
 
-def morphological_scale_image(image_path: str, se_shape_type: str, se_size: int):
-    """
-    Dilation과 Erosion의 연산
-    Args:
-        se_shape_type (str): SE. 'rect', 'ellipse', 'cross'.
-        se_size (int): size of SE (예: 3, 5, 7 ...).
-    """
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+img1_rgb = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+img2_rgb = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+img3_rgb = cv2.cvtColor(img3, cv2.COLOR_BGR2RGB)
+img4_rgb = cv2.cvtColor(img4, cv2.COLOR_BGR2RGB)
 
-    if img is None:
-        print(f"오류: '{image_path}' 이미지를 찾을 수 없거나 로드할 수 없습니다.")
-        return
+# 이미지 크기 맞추기 
+img2_resized = cv2.resize(img2_rgb, (img1_rgb.shape[1], img1_rgb.shape[0]))
+img3_resized = cv2.resize(img3_rgb, (img1_rgb.shape[1], img1_rgb.shape[0]))
+img4_resized = cv2.resize(img4_rgb, (img1_rgb.shape[1], img1_rgb.shape[0]))
 
-    # Structuring Element
-    if se_shape_type == 'rect':
-        se = cv2.getStructuringElement(cv2.MORPH_RECT, (se_size, se_size))
-    elif se_shape_type == 'ellipse':
-        se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (se_size, se_size))
-    elif se_shape_type == 'cross':
-        se = cv2.getStructuringElement(cv2.MORPH_CROSS, (se_size, se_size))
-    else:
-        print("오류: 지원하지 않는 SE 형태입니다. ('rect', 'ellipse', 'cross' 중 선택)")
-        return
+# Addition
+img_add = cv2.add(img1_rgb, img2_resized)
 
-    # 3. Dilation 및 Erosion
-    dilated_img = cv2.dilate(img, se, iterations=1)
-    eroded_img = cv2.erode(img, se, iterations=1)
+# Subtraction
+img_sub = cv2.subtract(img1_rgb, img3_resized)
 
-    plt.figure(figsize=(18, 6))
+# Multiplication
+img_mul = cv2.multiply(img1_rgb, img4_resized, scale=0.01)
 
-    plt.subplot(1, 3, 1)
-    plt.imshow(img, cmap='gray')
-    plt.title(f"Original Image\nSize: {img.shape[1]}x{img.shape[0]}")
+# Division
+img_div = cv2.divide(img1_rgb, img4_resized, scale=255)
+
+# 각 연산에 대한 정보 (원본, 연산 이미지, 결과 이미지)
+operations_data = [
+    ("Addition", img2_resized, img_add),
+    ("Subtraction", img3_resized, img_sub),
+    ("Multiplication", img4_resized, img_mul),
+    ("Division", img4_resized, img_div)
+]
+
+plt.figure(figsize=(15, 16))
+
+for i, (op_name, operand_img, result_img) in enumerate(operations_data):
+    # 1열: 원본 이미지
+    plt.subplot(4, 3, i * 3 + 1)
+    plt.imshow(img1_rgb)
+    plt.title(f"Original (for {op_name})")
     plt.axis('off')
 
-    plt.subplot(1, 3, 2)
-    plt.imshow(dilated_img, cmap='gray')
-    plt.title(f"Dilation (Enlarged)\nSE: {se_shape_type.upper()}, Size: {se_size}x{se_size}")
+    # 2열: 연산에 사용된 이미지
+    plt.subplot(4, 3, i * 3 + 2)
+    plt.imshow(operand_img)
+    plt.title(f"Operand (for {op_name})")
     plt.axis('off')
 
-    plt.subplot(1, 3, 3)
-    plt.imshow(eroded_img, cmap='gray')
-    plt.title(f"Erosion (Shrunk)\nSE: {se_shape_type.upper()}, Size: {se_size}x{se_size}")
+    # 3열: 연산 결과 이미지
+    plt.subplot(4, 3, i * 3 + 3)
+    plt.imshow(result_img)
+    plt.title(f"{op_name} Result")
     plt.axis('off')
 
-    plt.tight_layout()
-    plt.show()
-
-if __name__ == "__main__":
-    image_file = 'vegi.jpeg'
-
-    # cross , 3x3 SE
-    print("--- cross 형태, 크기 3x3 SE를 이용한 Dilation 및 Erosion ---")
-    morphological_scale_image(image_file, se_shape_type='cross', se_size=3)
+plt.tight_layout()
+plt.show()
