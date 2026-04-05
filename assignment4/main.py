@@ -2,32 +2,29 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+def get_structuring_element(se_shape_type: str, se_size: int):
+    if se_shape_type == 'rect':
+        return cv2.getStructuringElement(cv2.MORPH_RECT, (se_size, se_size))
+    elif se_shape_type == 'ellipse':
+        return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (se_size, se_size))
+    elif se_shape_type == 'cross':
+        return cv2.getStructuringElement(cv2.MORPH_CROSS, (se_size, se_size))
+    else:
+        print("오류: 지원하지 않는 SE 형태입니다. ('rect', 'ellipse', 'cross' 중 선택)")
+        return None
 
-def morphological_scale_image(image_path: str, se_shape_type: str, se_size: int):
-    """
-    Dilation과 Erosion의 연산
-    Args:
-        se_shape_type (str): SE. 'rect', 'ellipse', 'cross'.
-        se_size (int): size of SE (예: 3, 5, 7 ...).
-    """
+def apply_dilation_erosion(image_path: str, se_shape_type: str, se_size: int):
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     if img is None:
         print(f"오류: '{image_path}' 이미지를 찾을 수 없거나 로드할 수 없습니다.")
         return
 
-    # Structuring Element
-    if se_shape_type == 'rect':
-        se = cv2.getStructuringElement(cv2.MORPH_RECT, (se_size, se_size))
-    elif se_shape_type == 'ellipse':
-        se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (se_size, se_size))
-    elif se_shape_type == 'cross':
-        se = cv2.getStructuringElement(cv2.MORPH_CROSS, (se_size, se_size))
-    else:
-        print("오류: 지원하지 않는 SE 형태입니다. ('rect', 'ellipse', 'cross' 중 선택)")
+    se = get_structuring_element(se_shape_type, se_size)
+    if se is None:
         return
 
-    # 3. Dilation 및 Erosion
+    # Dilation 및 Erosion 수행
     dilated_img = cv2.dilate(img, se, iterations=1)
     eroded_img = cv2.erode(img, se, iterations=1)
 
@@ -51,9 +48,56 @@ def morphological_scale_image(image_path: str, se_shape_type: str, se_size: int)
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    image_file = 'vegi.jpeg'
+def apply_opening_closing(image_path: str, se_shape_type: str, se_size: int):
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-    # cross , 3x3 SE
-    print("--- cross 형태, 크기 3x3 SE를 이용한 Dilation 및 Erosion ---")
-    morphological_scale_image(image_file, se_shape_type='cross', se_size=3)
+    if img is None:
+        print(f"오류: '{image_path}' 이미지를 찾을 수 없거나 로드할 수 없습니다.")
+        return
+
+    se = get_structuring_element(se_shape_type, se_size)
+    if se is None:
+        return
+
+    # Opening 및 Closing 수행
+    opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, se)
+    closing = cv2.morphologyEx(img, cv2.MORPH_CLOSE, se)
+
+    plt.figure(figsize=(12, 10))
+
+    # Opening 결과 시각화
+    plt.subplot(2, 2, 1)
+    plt.title("Original (for Opening)")
+    plt.imshow(img, cmap='gray')
+    plt.axis('off')
+
+    plt.subplot(2, 2, 2)
+    plt.title(f"After Opening (Noise Removed)\nSE: {se_shape_type.upper()}, Size: {se_size}x{se_size}")
+    plt.imshow(opening, cmap='gray')
+    plt.axis('off')
+
+    # Closing 결과 시각화
+    plt.subplot(2, 2, 3)
+    plt.title("Original (for Closing)")
+    plt.imshow(img, cmap='gray')
+    plt.axis('off')
+
+    plt.subplot(2, 2, 4)
+    plt.title(f"After Closing (Holes Filled)\nSE: {se_shape_type.upper()}, Size: {se_size}x{se_size}")
+    plt.imshow(closing, cmap='gray')
+    plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    # 1. Dilation & Erosion 실행
+    image_file_1 = 'vegi.jpeg'
+    print(f"--- {image_file_1} 이미지에 Dilation & Erosion 적용 ---")
+    apply_dilation_erosion(image_file_1, se_shape_type='cross', se_size=3)
+
+    # 2. Opening & Closing 실행
+    image_file_2 = 'test.png'
+    print(f"--- {image_file_2} 이미지에 Opening & Closing 적용 ---")
+    apply_opening_closing(image_file_2, se_shape_type='rect', se_size=19)
