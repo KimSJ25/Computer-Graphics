@@ -16,8 +16,11 @@ pillow==12.1.1
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 requests==2.33.1
+scikit-learn
 scikit-image==0.26.0
 scipy==1.17.1
 six==1.17.0
 tifffile==2026.3.3
+torch
+torchvision
 urllib3==2.6.3

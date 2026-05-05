@@ -103,3 +103,6 @@ venv.bak/
 
 # Other
 *.log
+
+# 다운로드된 데이터셋 무시
+knn/data/
