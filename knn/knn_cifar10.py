@@ -2,6 +2,7 @@ import numpy as np
 from collections import Counter
 import torchvision
 from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
 import time
 
 def load_cifar10():
@@ -55,7 +56,6 @@ def predict_labels(dists, y_train, k=1):
     return y_pred
 
 def main():
-    # 1. Load data
     X_train, y_train, X_test, y_test = load_cifar10()
     print(f"Data shape - X_train: {X_train.shape}, X_test: {X_test.shape}\n")
 
@@ -64,8 +64,9 @@ def main():
     
     best_acc = 0
     best_pred = None
+    
+    accuracies_history = {metric: [] for metric in metrics}
 
-    # 2. Evaluate (for each metric and K value)
     for metric in metrics:
         # Calculate distance for a specific metric once and reuse it.
         dists = compute_distances(X_train, X_test, metric=metric)
@@ -77,16 +78,30 @@ def main():
             accuracy = float(num_correct) / len(y_test)
             print(f"Metric: {metric}, K: {k} => Accuracy: {accuracy:.4f}")
             
+            # Store accuracy for plotting
+            accuracies_history[metric].append(accuracy)
+            
             # Save the best prediction result (for confusion matrix)
             if accuracy > best_acc:
                 best_acc = accuracy
                 best_pred = y_test_pred
         print("-" * 30)
 
-    # 3. Print the Confusion Matrix of the best model
     print("\n[Confusion Matrix of the best model]")
     cm = confusion_matrix(y_test, best_pred)
     print(cm)
+
+    print("\n[Plotting the results]")
+    plt.figure(figsize=(10, 6))
+    for metric in metrics:
+        plt.plot(k_choices, accuracies_history[metric], marker='o', label=f'{metric} Distance')
+    plt.title('KNN Accuracy on CIFAR-10')
+    plt.xlabel('k value')
+    plt.ylabel('Accuracy')
+    plt.xticks(k_choices)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 if __name__ == '__main__':
     main()
