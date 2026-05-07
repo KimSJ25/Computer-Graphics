@@ -59,33 +59,62 @@ def main():
     X_train, y_train, X_test, y_test = load_cifar10()
     print(f"Data shape - X_train: {X_train.shape}, X_test: {X_test.shape}\n")
 
+    num_folds = 5
     k_choices = [1, 3, 5, 7, 9]
     metrics = ['L1', 'L2']
     
+    # Split training data into 5 folds for Cross Validation
+    X_train_folds = np.array_split(X_train, num_folds)
+    y_train_folds = np.array_split(y_train, num_folds)
+
     best_acc = 0
-    best_pred = None
+    best_k = 1
+    best_metric = 'L1'
     
     accuracies_history = {metric: [] for metric in metrics}
+    fold_accuracies_history = {metric: {} for metric in metrics}
 
     for metric in metrics:
-        # Calculate distance for a specific metric once and reuse it.
-        dists = compute_distances(X_train, X_test, metric=metric)
-        
+        print(f"\n--- Cross Validation for {metric} Distance ---")
+        k_to_accuracies = {k: [] for k in k_choices}
+
+        for i in range(num_folds):
+            # Set the current fold as validation set, others as training set
+            X_val_fold = X_train_folds[i]
+            y_val_fold = y_train_folds[i]
+            
+            X_tr_fold = np.concatenate(X_train_folds[:i] + X_train_folds[i+1:])
+            y_tr_fold = np.concatenate(y_train_folds[:i] + y_train_folds[i+1:])
+            
+            # Calculate distances for the current fold
+            dists = compute_distances(X_tr_fold, X_val_fold, metric=metric)
+            
+            for k in k_choices:
+                y_val_pred = predict_labels(dists, y_tr_fold, k=k)
+                accuracy = float(np.sum(y_val_pred == y_val_fold)) / len(y_val_fold)
+                k_to_accuracies[k].append(accuracy)
+
+        fold_accuracies_history[metric] = k_to_accuracies
+
         for k in k_choices:
-            y_test_pred = predict_labels(dists, y_train, k=k)
-            # Calculate accuracy
-            num_correct = np.sum(y_test_pred == y_test)
-            accuracy = float(num_correct) / len(y_test)
-            print(f"Metric: {metric}, K: {k} => Accuracy: {accuracy:.4f}")
+            # Average accuracy across all 5 folds
+            avg_acc = np.mean(k_to_accuracies[k])
+            print(f"Metric: {metric}, K: {k} => CV Avg Accuracy: {avg_acc:.4f}")
+            accuracies_history[metric].append(avg_acc)
             
-            # Store accuracy for plotting
-            accuracies_history[metric].append(accuracy)
-            
-            # Save the best prediction result (for confusion matrix)
-            if accuracy > best_acc:
-                best_acc = accuracy
-                best_pred = y_test_pred
+            if avg_acc > best_acc:
+                best_acc = avg_acc
+                best_k = k
+                best_metric = metric
         print("-" * 30)
+
+    # Evaluate the best model on the actual test set
+    print(f"\n[Best Model] Metric: {best_metric}, K: {best_k} (CV Accuracy: {best_acc:.4f})")
+    print("Evaluating best model on the Test Dataset...")
+    best_dists = compute_distances(X_train, X_test, metric=best_metric)
+    best_pred = predict_labels(best_dists, y_train, k=best_k)
+    test_acc = float(np.sum(best_pred == y_test)) / len(y_test)
+    print(f"Final Test Accuracy: {test_acc:.4f}")
 
     print("\n[Confusion Matrix of the best model]")
     cm = confusion_matrix(y_test, best_pred)
@@ -93,9 +122,21 @@ def main():
 
     print("\n[Plotting the results]")
     plt.figure(figsize=(10, 6))
+    
+    colors = {'L1': 'blue', 'L2': 'orange'}
+    
     for metric in metrics:
-        plt.plot(k_choices, accuracies_history[metric], marker='o', label=f'{metric} Distance')
-    plt.title('KNN Accuracy on CIFAR-10')
+        k_points = []
+        acc_points = []
+        for k in k_choices:
+            for acc in fold_accuracies_history[metric][k]:
+                k_points.append(k)
+                acc_points.append(acc)
+        plt.scatter(k_points, acc_points, color=colors[metric], alpha=0.4, label=f'{metric} Individual Folds')
+        
+        plt.plot(k_choices, accuracies_history[metric], marker='o', color=colors[metric], linewidth=2, label=f'{metric} Average')
+        
+    plt.title('KNN Cross-Validation Accuracy on CIFAR-10')
     plt.xlabel('k value')
     plt.ylabel('Accuracy')
     plt.xticks(k_choices)
